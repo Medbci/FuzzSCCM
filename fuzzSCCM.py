@@ -7,14 +7,7 @@ from scipy.signal import hilbert
 import glob
 import math
 import os
-# 假设你已经有一个EEG数据文件，例如 .fif, .edf 等
-# 使用mne.io读取EEG数据，这里使用示例数据集
-# raw = mne.io.read_raw_fif('your_eeg_file.fif', preload=True)
-# 或者加载MNE自带的示例数据
-filepaths = glob.glob('/home/med_bci/data/datasets/orig_eeg/*.set')
-# data = np.load(filepath)
-#转到calculate——pc
-# 读取 .set 文件
+
 from scipy.spatial.distance import cdist
 def euclidean_distance_np(point1, point2):
     return np.linalg.norm(np.array(point1) - np.array(point2))
@@ -24,15 +17,15 @@ def f(x):
     return np.exp(-x ** 2)
 def fuzz_diff(x,std, scale):
     u = np.zeros(3)
-    if x<=-0.7*std:
+    if x<=-0.5*std:
         u[0] = 1
-    elif -0.7*std<x and x<0:
+    elif -0.5*std<x and x<0:
         u[0] = 1-math.exp(-x**2/(2*0.5*std))
         u[1] = math.exp(-x**2/(2*0.5*std))
-    elif 0<=x and x<0.7*std:
+    elif 0<=x and x<0.5*std:
         u[1] = math.exp(-x**2/(2*0.5*std))
         u[2] = 1-math.exp(-x**2/(2*0.5*std))
-    elif x>=0.7*std:
+    elif x>=0.5*std:
         u[2] = 1
     return u
 
@@ -50,27 +43,27 @@ def cal_pattern(x):
     elif x[0] > 0 and x[1] > 0:
         return 5
 def cosine_similarity(vec1, vec2):
-    # 计算向量的点积
+    
     dot_product = np.dot(vec1, vec2)
-    # 计算每个向量的欧几里得范数
+
 
     norm_vec1 = np.linalg.norm(vec1)
     norm_vec2 = np.linalg.norm(vec2)
     if norm_vec1 == 0 or norm_vec2 == 0:
         return 0
-    # 计算余弦相似性
+    
     else:
         similarity = dot_product / (norm_vec1 * norm_vec2)
         return similarity
 import csv
 import random
-paths = glob.glob(r'/home/med_bci/data/datasets/orig_eeg/*.set')
+paths = glob.glob(r'your_path/*.set')
 for i in range(37,44):
         filepath = paths[i]
         raw = mne.io.read_raw_eeglab(filepath, preload=True)
         name = filepath.split('/')[-1].replace('.set','')
         print(name)
-        # 定义频带
+   
         freq_bands = {
             'delta': (1, 4),
             'theta': (4, 8),
@@ -78,34 +71,32 @@ for i in range(37,44):
             'beta': (13, 30),
         }
         freqq = ['delta', 'theta', 'alpha', 'beta']
-        # 使用带通滤波器过滤数据以分离各个频带
+      
         filtered_data = {}
         hilbert_transformed_data = {}
         instantaneous_phase_all = []
         for band, (low_freq, high_freq) in freq_bands.items():
-            # 复制原始数据并进行带通滤波
+           
             filtered_data[band] = raw.copy().filter(l_freq=low_freq, h_freq=high_freq)
 
-            # 获取滤波后的数据
+     
             band_data = filtered_data[band].get_data()
             # print(band_data.shape)   (30, 136303)
 
 
             instantaneous_phase_all.append(band_data)
-        max_num = instantaneous_phase_all[0].shape[1] -30000
-        rd = random.randint(2000, max_num)
-        # print(instantaneous_phase_all)
+       
         for fre in range(2,3):
 
-            # data = data+noise
+          
             count = 0
             chan_n = 30
             matrix= instantaneous_phase_all[fre]
-              # 频率  导联  时刻数 三维
+            
             t_len = 1000
             metrics1 = 0
             metrics2 = 0
-            for ti in range(rd,rd+30000,t_len):
+            for ti in range(0,30000,t_len):
                 start_t = time.time()
 
                 xyt = np.stack([
@@ -124,25 +115,24 @@ for i in range(37,44):
                 x1 = xyt[:, :, 1] - xyt[:, :, 0]  # shape (chan_n, t_len)
                 x2 = xyt[:, :, 2] - xyt[:, :, 1]  # shape (chan_n, t_len
 
-                n1 = np.array([fuzz_diff(val, std2, 0.5) for val in x1.ravel()]).reshape(chan_n, t_len, 3) #每个时刻每个class的隶属度
+                n1 = np.array([fuzz_diff(val, std2, 0.5) for val in x1.ravel()]).reshape(chan_n, t_len, 3) 
                 n2 = np.array([fuzz_diff(val, std2, 0.5) for val in x2.ravel()]).reshape(chan_n, t_len, 3)
 
-                # 生成模式索引 (3x3)
+            
                 patterns = np.array([[[i, j] for j in range(3)] for i in range(3)])  # shape (3,3,2)
 
 
                 weights = n1[:, :, :, None] * n2[:, :, None, :]  # shape (chan_n, t_len, 3, 3)
 
-                # 乘以模式索引并求和
                 real_pattern = np.sum(weights[..., None] * patterns, axis=(2, 3))
 
                 distance = np.zeros((chan_n, t_len, t_len))
                 for j in range(chan_n):
-                    # cdist 一次性计算 t_len x t_len 距离矩阵
+                  
                     dist_mat = cdist(xyt[j], xyt[j], metric='euclidean')
                     distance[j] = dist_mat
 
-                aver_nn = np.zeros((chan_n, chan_n, t_len, 3))  # 300是时刻，有300个点， （频率，导联，导联，时刻，三阶）对应i对j影响的邻居index的模式
+                aver_nn = np.zeros((chan_n, chan_n, t_len, 3)) 
 
                 for j in range(chan_n):
                     for c in range(chan_n):
@@ -153,8 +143,8 @@ for i in range(37,44):
                                 key = index[1]
                                 inn = index[k]
                                 # NN[i][j][t][k] = xyt[i][j][inn]
-                                weight = math.exp(-distance[j][t][inn] / distance[j][t][key])  # 修改减去最小值
-                                aver_nn[j][c][t] += weight * xyt[c][inn]  # 修改减去最小值
+                                weight = math.exp(-distance[j][t][inn] / distance[j][t][key])  
+                                aver_nn[j][c][t] += weight * xyt[c][inn] 
                 nn = aver_nn  # (freq, 30,30, 3000, 3)
                 # print(nn.shape)
                 signare = np.zeros((chan_n, chan_n, t_len, 2))
@@ -177,7 +167,7 @@ for i in range(37,44):
 
                 weights = n1[..., :, None] * n2[..., None, :]  # (chan_n, chan_n, t_len, 3, 3)
 
-                # 广播乘以 patterns 并在组合维度(3,3)上求和
+                
                 hhh = np.sum(weights[..., None] * patterns, axis=(-3, -2))  # (chan_n, chan_n, t_len, 2)
 
                 for k in range(t_len):
@@ -185,8 +175,7 @@ for i in range(37,44):
                         for t in range(chan_n):
                             x1 = hhh[j][t][k]
                             x2 = real_pattern[t][k]
-                            x1 = np.round(x1, decimals=0).astype(int)
-                            x2 = np.round(x2, decimals=0).astype(int)
+                            
                             # print(x1, x2)
                             # corr = cosine_similarity(x1,x2)
                             # print(corr)
@@ -208,7 +197,7 @@ for i in range(37,44):
                             else:
                                 corr= np.corrcoef(x1, x2)[0, 1]
                                 pc_matirx[t][j] += corr
-                newpth = '/home/med_bci/ltt/nn_revise/delta0.7/' + freqq[fre] + '_' + str(count) + '_' + filepath.split('/')[-1].replace('set', 'npy')
+                newpth = 'you_out_path/' + freqq[fre] + '_' + str(count) + '_' + filepath.split('/')[-1].replace('set', 'npy')
                 np.save(newpth, pc_matirx)
                 print(count)
                 count += 1
