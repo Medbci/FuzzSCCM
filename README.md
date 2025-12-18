@@ -1,5 +1,17 @@
 # FuzzSCCM
-## This repository contains the core implementation of the methods described in our manuscript, which is currently under peer review. The code is released for research and review purposes only. Please contact the authors before using it for publication or commercial applications.
+## The paper associated with this code has been accepted for publication. If you use this code or any part of it in your research, please cite the corresponding paper
+@article{LI2026108318,
+title = {Fuzzy symbolic convergent cross mapping: A causal coupling measure for EEG signals in disorders of consciousness patients},
+journal = {Neural Networks},
+volume = {195},
+pages = {108318},
+year = {2026},
+issn = {0893-6080},
+doi = {https://doi.org/10.1016/j.neunet.2025.108318},
+url = {https://www.sciencedirect.com/science/article/pii/S0893608025011992},
+author = {Tingting Li and Xingwei An and Yang Di and Honglin Wang and Yujia Yan and Shuang Liu and Yueqing Dong and Dong Ming},
+}
+
 ### Environment Versions
 
 * **Python**: `3.12.6`
