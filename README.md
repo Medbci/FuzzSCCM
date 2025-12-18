@@ -1,5 +1,9 @@
 # FuzzSCCM
 ## The paper associated with this code has been accepted for publication. If you use this code or any part of it in your research, please cite the corresponding paper
+
+## Citation
+
+```bibtex
 @article{LI2026108318,
 title = {Fuzzy symbolic convergent cross mapping: A causal coupling measure for EEG signals in disorders of consciousness patients},
 journal = {Neural Networks},
